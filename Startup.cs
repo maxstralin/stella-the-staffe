@@ -17,6 +17,7 @@ using Blazorise.Material;
 using Blazorise.Icons.Material;
 using MongoDB.Driver;
 using MongoDB.Bson.Serialization;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace StellaTheStaffe
 {
@@ -52,11 +53,20 @@ namespace StellaTheStaffe
             services.AddSingleton<PostsService>();
             services.AddSingleton<PostsContext>();
             if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.ToLower() != Environments.Development) services.AddHostedService<InstagramFetchService>();
+
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders =
+                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            });
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseForwardedHeaders();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

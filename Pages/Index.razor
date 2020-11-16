@@ -7,7 +7,7 @@
 @{
     if (startDate == null || InstagramData == null)
     {
-        <div class="d-flex justify-content-center align-items-center w-100 h-100"><StellaTheStaffe.Components.NoPosts /></div>
+    <div class="d-flex justify-content-center align-items-center w-100 h-100"><StellaTheStaffe.Components.NoPosts /></div>
         return;
     }
     var newer = Dates?.Where(a => a > startDate.Value).OrderBy(a => a).Select(a => (DateTime?)a).FirstOrDefault();
@@ -34,15 +34,15 @@
                     <div>
                         @if (InstagramData.Count == 0)
                         {
-                            <DisplayHeading Class="text-center" Size="DisplayHeadingSize.Is4">Hittade inga bilder från den här dagen!</DisplayHeading>
+                        <DisplayHeading Class="text-center" Size="DisplayHeadingSize.Is4">Hittade inga bilder från den här dagen!</DisplayHeading>
                         }
                         else
                         {
                             foreach (var item in InstagramData)
                             {
-                                <div class="w-100 d-flex justify-content-center" @key="item.Id">
-                                    @((MarkupString)item.OembedData.Html)
-                                </div>
+                        <div class="w-100 d-flex justify-content-center" @key="item.Id">
+                            @((MarkupString)item.OembedData.Html)
+                        </div>
                             }
                         }
                     </div>
@@ -81,7 +81,7 @@ var viewingWeek = startDate!.Value.GetWeeksFromBirth();
 var prevWeek = weeks.OrderByDescending(a => a).Where(a => a < viewingWeek).FirstOrDefault();
 var disabled = prevWeek == 0;
 
-return@<Button Clicked="async () => await SetSelectedDatesAsync(DateHelpers.GetDatesInWeek(prevWeek))" class="flex-shrink-0"  Color="Color.Light" Disabled="disabled"><Icon Name="@IconName.ChevronLeft" /> <span class="d-none d-sm-inline">@(disabled ? "Inget äldre" : $"Vecka {prevWeek}")</span></Button>;
+return@<Button Clicked="async () => await SetSelectedDatesAsync(DateHelpers.GetDatesInWeek(prevWeek))" class="flex-shrink-0" Color="Color.Light" Disabled="disabled"><Icon Name="@IconName.ChevronLeft" /> <span class="d-none d-sm-inline">@(disabled ? "Inget äldre" : $"Vecka {prevWeek}")</span></Button>;
 
 }
 }
@@ -118,6 +118,6 @@ StateHasChanged();
 
 protected override async Task OnAfterRenderAsync(bool firstRender)
 {
-if (!firstRender) await JS.InvokeVoidAsync("window.instgrm.Embeds.process");
+await JS.InvokeVoidAsync("window.instgrm.Embeds.process");
 }
 }
