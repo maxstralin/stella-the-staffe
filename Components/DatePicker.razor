@@ -1,0 +1,121 @@
+﻿@inject PostsService postService
+@{
+    var groupedByMonth = Dates.GroupBy(a => a.ToString("MMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("sv-SE")), a => a, (a, b) => new { Month = a, Dates = b.OrderByDescending(a => a) });
+    var orderedByMonth = groupedByMonth.OrderByDescending(a => DateTime.ParseExact(a.Month, "MMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("sv-SE")));
+
+
+
+    <Bar Mode="BarMode.VerticalInline"
+  CollapseMode="BarCollapseMode.Small"
+  Breakpoint="Breakpoint.Desktop"
+  NavigationBreakpoint="Breakpoint.Desktop"
+         ThemeContrast="ThemeContrast.Light">
+        <div class="d-flex justify-content-center w-100 py-2">
+            <BarToggler />
+        </div>
+        <BarMenu>
+
+            <BarStart>
+                <BarItem>
+                    <BarLink Clicked="async () => await SetSelectedDatesAsync(Dates.ElementAt(new Random().Next(0, Dates.Count())))">
+                        Slumpa dag
+                    </BarLink>
+                </BarItem>
+                <BarItem>
+                    <BarDropdown>
+                        <BarDropdownToggle>
+                            Per datum
+                        </BarDropdownToggle>
+                        <BarDropdownMenu>
+                            @foreach (var group in orderedByMonth)
+                            {
+                                <BarDropdown>
+                                    <BarDropdownToggle>
+                                        @group.Month
+                                    </BarDropdownToggle>
+                                    <BarDropdownMenu>
+                                        @foreach (var item in group.Dates)
+                                        {
+                                            <BarLink Clicked="async () => await SetSelectedDatesAsync(item)">
+                                                @item.ToString("dd ddd", System.Globalization.CultureInfo.GetCultureInfo("sv-SE"))
+                                            </BarLink>
+                                        }
+                                    </BarDropdownMenu>
+                                </BarDropdown>
+                            }
+                        </BarDropdownMenu>
+                    </BarDropdown>
+                </BarItem>
+                @if (Weeks != null)
+                {
+                    <BarItem>
+                        <BarDropdown>
+                            <BarDropdownToggle>
+                                Per ålder
+                            </BarDropdownToggle>
+                            <BarDropdownMenu>
+                                @for (var i = MonthsOld; i >= 1; i--)
+                                {
+                                    var month = i;
+                                    var weeksInMonth = Weeks.Where(a => a >= ((month - 1) * 4 + 1) && a <= (month * 4)).ToList();
+                                    if (weeksInMonth.Count == 0) continue;
+                                    <BarDropdown>
+                                        <BarDropdownToggle>
+                                            Månad @month
+                                        </BarDropdownToggle>
+                                        <BarDropdownMenu>
+
+                                            @foreach (var week in weeksInMonth)
+                                            {
+                                                var weekNo = week;
+                                                var startDate = Constants.BirthDate.AddDays(7 * (weekNo - 1));
+                                                var endDate = startDate.AddDays(6);
+                                                <BarLink Clicked="async () => await SetSelectedDatesAsync(startDate, endDate)">
+                                                    Vecka @weekNo
+                                                </BarLink>
+                                            }
+                                        </BarDropdownMenu>
+                                    </BarDropdown>
+                                }
+                            </BarDropdownMenu>
+                        </BarDropdown>
+                    </BarItem>
+                }
+            </BarStart>
+        </BarMenu>
+    </Bar>
+}
+
+@code {
+    [Parameter]
+    public IEnumerable<DateTime> Dates { get; set; } = Enumerable.Empty<DateTime>();
+
+    [Parameter]
+    public (DateTime minDate, DateTime? maxDate)? SelectedDates { get; set; }
+
+    [Parameter]
+    public EventCallback<(DateTime? minDate, DateTime? maxDate)> SelectedDateChanged { get; set; }
+
+    private IEnumerable<int>? Weeks { get; set; }
+    private int? MonthsOld
+    {
+        get
+        {
+            if (Weeks is null) return null;
+            return (int)Math.Ceiling(Weeks.Max() / 4f);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Weeks = await postService.GetWeeksAsync();
+    }
+
+    private async Task SetSelectedDatesAsync(DateTime minDate, DateTime? maxDate = null)
+    {
+        var tuple = (minDate, maxDate);
+        SelectedDates = tuple;
+        await SelectedDateChanged.InvokeAsync(tuple);
+    }
+
+}

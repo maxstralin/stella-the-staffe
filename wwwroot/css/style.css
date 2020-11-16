@@ -1,0 +1,26 @@
+﻿@media only screen and (max-width : 991px) {
+    .navbar {
+        min-height: unset;
+    }
+    .b-layout.b-layout-has-sider {
+        flex-direction: column;
+    }
+
+    b-layout-sider-content {
+        background: var(--b-bar-light-background, #fff);
+    }
+
+    .b-layout-sider-content, .b-bar-vertical-inline[data-collapse=small], .b-bar-vertical-inline {
+        height: auto;
+        width: 100%;
+        min-width: 100%;
+    }
+
+        .b-bar-vertical-inline[data-collapse=small] .b-bar-menu {
+            display: none !important;
+        }
+
+    .navbar-toggler {
+        display: inline-flex !important;
+    }
+}

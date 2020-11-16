@@ -1,0 +1,123 @@
+﻿@page "/"
+@using StellaTheStaffe.Models
+@using MongoDB.Driver;
+@inject PostsService postService
+@inject IJSRuntime JS
+
+@{
+    if (startDate == null || InstagramData == null)
+    {
+        <div class="d-flex justify-content-center align-items-center w-100 h-100"><StellaTheStaffe.Components.NoPosts /></div>
+        return;
+    }
+    var newer = Dates?.Where(a => a > startDate.Value).OrderBy(a => a).Select(a => (DateTime?)a).FirstOrDefault();
+    <Layout Sider="true">
+        <LayoutSider>
+            <LayoutSiderContent>
+                <StellaTheStaffe.Components.DatePicker Dates="@Dates" SelectedDateChanged="SetSelectedDatesAsync" />
+            </LayoutSiderContent>
+        </LayoutSider>
+        <Layout>
+            <LayoutContent>
+                <div class="flex-grow-1 justify-content-center">
+                    <Alert Color="Color.Info" Visible="true" Style="position: sticky; top: 0px;" Class="d-flex align-items-center justify-content-between">
+                        @RenderOlderBtn()
+                        <div class="flex-grow-1 text-center">
+                            <AlertMessage Class="d-block">
+                                @startDate.Value.ToString("dd MMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("sv-SE"))
+                                @(endDate.HasValue ? " till "+endDate.Value.ToString("dd MMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("sv-SE")) : "")
+                            </AlertMessage>
+                            <AlertDescription>Här är jag @startDate.Value.GetMonthsFromBirth() månader,<div class="d-block d-md-none"></div> inne på vecka @startDate.Value.GetWeeksFromBirth()</AlertDescription>
+                        </div>
+                        @RenderNewerBtn()
+                    </Alert>
+                    <div>
+                        @if (InstagramData.Count == 0)
+                        {
+                            <DisplayHeading Class="text-center" Size="DisplayHeadingSize.Is4">Hittade inga bilder från den här dagen!</DisplayHeading>
+                        }
+                        else
+                        {
+                            foreach (var item in InstagramData)
+                            {
+                                <div class="w-100 d-flex justify-content-center" @key="item.Id">
+                                    @((MarkupString)item.OembedData.Html)
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </LayoutContent>
+        </Layout>
+    </Layout>
+
+}
+@code {
+    private DateTime? startDate = null;
+    private DateTime? endDate = null;
+    private List<InstagramData>? InstagramData;
+    private List<DateTime>? Dates = null;
+    private List<int>? Weeks = null;
+    protected override async Task OnInitializedAsync()
+    {
+        Dates = (await postService.GetDatesAsync()).ToList();
+        Weeks = (await postService.GetWeeksAsync()).ToList();
+        await SetSelectedDatesAsync((Dates.LastOrDefault(), null));
+    }
+
+    private RenderFragment RenderOlderBtn()
+    {
+        var weekly = startDate.HasValue && endDate.HasValue;
+        if (!weekly)
+        {
+            var older = Dates?.Where(a => a < startDate).OrderByDescending(a => a).Select(a => (DateTime?)a).FirstOrDefault();
+            return@<Button Clicked="async () => await SetSelectedDatesAsync((older, null))" class="flex-shrink-0" Color="Color.Light" Disabled="older == null"><Icon Name="@IconName.ChevronLeft" /> <span class="d-none d-sm-inline">@(older == null ? "Inget äldre" : older.Value.ToString("dd MMM", System.Globalization.CultureInfo.GetCultureInfo("sv-SE")))</span></Button>;
+}
+else
+{
+var weeks = Weeks ?? throw new NullReferenceException("Weeks are null");
+var viewingWeek = startDate!.Value.GetWeeksFromBirth();
+
+var prevWeek = weeks.OrderByDescending(a => a).Where(a => a < viewingWeek).FirstOrDefault();
+var disabled = prevWeek == 0;
+
+return@<Button Clicked="async () => await SetSelectedDatesAsync(DateHelpers.GetDatesInWeek(prevWeek))" class="flex-shrink-0"  Color="Color.Light" Disabled="disabled"><Icon Name="@IconName.ChevronLeft" /> <span class="d-none d-sm-inline">@(disabled ? "Inget äldre" : $"Vecka {prevWeek}")</span></Button>;
+
+}
+}
+
+private RenderFragment RenderNewerBtn()
+{
+var weekly = startDate.HasValue && endDate.HasValue;
+if (!weekly)
+{
+var newer = Dates?.Where(a => a > startDate).OrderBy(a => a).Select(a => (DateTime?)a).FirstOrDefault();
+return@<Button Clicked="async () => await SetSelectedDatesAsync((newer, null))" class="flex-shrink-0" Color="Color.Light" Disabled="newer == null"><span class="d-none d-sm-inline">@(newer == null ? "Inget senare" : newer.Value.ToString("dd MMM", System.Globalization.CultureInfo.GetCultureInfo("sv-SE")))</span> <Icon Name="@IconName.ChevronRight" /></Button>;
+}
+else
+{
+var weeks = Weeks ?? throw new NullReferenceException("Weeks are null");
+var viewingWeek = startDate!.Value.GetWeeksFromBirth();
+
+var nextWeek = weeks.OrderBy(a => a).Where(a => a > viewingWeek).FirstOrDefault();
+var disabled = nextWeek == 0;
+
+return@<Button Clicked="async () => await SetSelectedDatesAsync(DateHelpers.GetDatesInWeek(nextWeek))" class="flex-shrink-0" Color="Color.Light" Disabled="disabled"><span class="d-none d-sm-inline">@(disabled ? "Inget nyare" : $"Vecka {nextWeek}")</span> <Icon Name="@IconName.ChevronRight" /></Button>;
+
+}
+}
+
+private async Task SetSelectedDatesAsync((DateTime? minDate, DateTime? maxDate) dates)
+{
+startDate = dates.minDate;
+endDate = dates.maxDate;
+if (startDate == null) InstagramData = null;
+else InstagramData = (await postService.GetByDatesAsync(startDate.Value, endDate)).ToList();
+StateHasChanged();
+}
+
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+if (!firstRender) await JS.InvokeVoidAsync("window.instgrm.Embeds.process");
+}
+}
